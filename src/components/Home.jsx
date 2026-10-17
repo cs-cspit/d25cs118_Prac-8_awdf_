@@ -7,20 +7,20 @@ function Home() {
   return (
     <section className="section section-hero">
       <div className="hero-copy">
-        <p className="eyebrow">Welcome to Practical 7</p>
+        <p className="eyebrow">Welcome to Practical 8</p>
         <h1>
-          Authentication &amp; <span className="gradient-text">Middleware</span>
+          Lazy Loading &amp; <span className="gradient-text">Code Splitting</span>
         </h1>
         <p className="section-intro">
-          JWT-based login and server-side input validation added to the
-          full-stack Task Manager from Practical 6.
+          The Task Manager from Practicals 6–7, optimized with route-based code
+          splitting using React.lazy() and Suspense.
         </p>
         <p className="hero-note">
-          Passwords are hashed with bcrypt before they reach MongoDB. Logging in
-          returns a signed JWT (1 hour expiry) which the React app sends as{' '}
-          <code>Authorization: Bearer &lt;token&gt;</code>. Every task route runs
-          through the auth middleware and then the validation middleware before
-          reaching the controller.
+          Only this Home page ships in the main bundle. Tasks, Contact, Login and
+          Register are separate chunks that download the first time you visit them,
+          and the chart library behind <em>Show statistics</em> loads only when you
+          open it. Open DevTools → Network, throttle to Slow 3G and click around to
+          watch each chunk arrive.
         </p>
         <p className="hero-note">
           {user ? (
@@ -32,14 +32,14 @@ function Home() {
         <div className="feature-list">
           <p>✨ Key Features:</p>
           <ul>
-            <li>POST /api/auth/register — bcrypt-hashed passwords</li>
-            <li>POST /api/auth/login — signed JWT with 1h expiry</li>
-            <li>GET /api/auth/me — current user from the decoded token</li>
-            <li>Auth middleware protecting every /api/tasks route (401 on missing/expired token)</li>
-            <li>Validation middleware: required fields, email format, password length</li>
-            <li>Tasks scoped per user — you only see your own tasks</li>
-            <li>Frontend logs out and redirects to /login on any 401</li>
-            <li>JWT_SECRET loaded from .env, never committed</li>
+            <li>React.lazy() + dynamic import() for 4 route components</li>
+            <li>One Suspense boundary around the Routes block (navbar stays visible)</li>
+            <li>Skeleton fallback shown only after 300ms — no flicker on fast networks</li>
+            <li>Error boundary with Retry if a chunk fails to download</li>
+            <li>recharts statistics lazy-loaded on demand (381 kB chunk kept out of first load)</li>
+            <li>React.memo + useCallback remove needless TaskList re-renders while typing</li>
+            <li>Initial JS: 632.8 kB → 238.2 kB (−62%)</li>
+            <li>Still includes JWT auth from Practical 7</li>
           </ul>
         </div>
       </div>

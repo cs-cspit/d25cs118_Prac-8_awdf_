@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useState } from 'react'
 import Spinner from './Spinner'
 import ErrorMessage from './ErrorMessage'
 import { createTask, deleteTask, getTasks, updateTask } from '../api'
 import { useAuth } from '../context/authContext'
+
+// Heavy third-party chart (recharts) - its chunk downloads only when the user
+// clicks "Show statistics", not when the Tasks page first opens.
+const TaskStats = lazy(() => import('./TaskStats'))
 
 const PRIORITY_LABELS = {
   low: '🟢 Low',
@@ -10,7 +14,10 @@ const PRIORITY_LABELS = {
   high: '🔴 High'
 }
 
-function TaskList({ tasks, onEdit, onDelete, onToggle }) {
+// memo: found with the React DevTools Profiler - typing in the form re-rendered
+// every task card on each keystroke even though the list had not changed.
+// With memo + stable (useCallback) handlers, TaskList now skips those renders.
+const TaskList = memo(function TaskList({ tasks, onEdit, onDelete, onToggle }) {
   return (
     <div className="card-grid">
       {tasks.length === 0 ? (
@@ -57,7 +64,7 @@ function TaskList({ tasks, onEdit, onDelete, onToggle }) {
       )}
     </div>
   )
-}
+})
 
 function Tasks() {
   const [tasks, setTasks] = useState([])
@@ -67,11 +74,12 @@ function Tasks() {
   const [editingId, setEditingId] = useState(null)
   const [submitError, setSubmitError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [showStats, setShowStats] = useState(false)
   const { user } = useAuth()
 
   // Refresh the task list (used after create / update / delete).
   // The JWT is attached by api.js; a 401 logs the user out automatically.
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       const data = await getTasks()
       setTasks(data)
@@ -81,7 +89,7 @@ function Tasks() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // Initial load - GET /api/tasks
   useEffect(() => {
@@ -115,10 +123,10 @@ function Tasks() {
     setSubmitError('')
   }
 
-  const showSuccess = (message) => {
+  const showSuccess = useCallback((message) => {
     setSuccessMessage(message)
     setTimeout(() => setSuccessMessage(''), 3000)
-  }
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -143,7 +151,7 @@ function Tasks() {
     }
   }
 
-  const handleEdit = (task) => {
+  const handleEdit = useCallback((task) => {
     setFormData({
       title: task.title,
       description: task.description,
@@ -151,9 +159,9 @@ function Tasks() {
     })
     setEditingId(task._id)
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  }, [])
 
-  const handleDelete = async (id) => {
+  const handleDelete = useCallback(async (id) => {
     if (!confirm('Are you sure you want to delete this task?')) return
 
     try {
@@ -163,9 +171,9 @@ function Tasks() {
     } catch (err) {
       setError(err.message || 'Failed to delete task')
     }
-  }
+  }, [fetchTasks, showSuccess])
 
-  const handleToggleCompleted = async (task) => {
+  const handleToggleCompleted = useCallback(async (task) => {
     try {
       await updateTask(task._id, {
         title: task.title,
@@ -177,7 +185,7 @@ function Tasks() {
     } catch (err) {
       setError(err.message || 'Failed to toggle task')
     }
-  }
+  }, [fetchTasks])
 
   const handleCancel = () => {
     setFormData({ title: '', description: '', priority: 'medium' })
@@ -251,6 +259,18 @@ function Tasks() {
             )}
           </div>
         </form>
+      </div>
+
+      {/* Statistics - lazy-loaded heavy component */}
+      <div className="tasks-section">
+        <button type="button" className="btn-edit" onClick={() => setShowStats((v) => !v)}>
+          {showStats ? 'Hide statistics' : '📊 Show statistics'}
+        </button>
+        {showStats && (
+          <Suspense fallback={<Spinner label="Loading chart library…" />}>
+            <TaskStats tasks={tasks} />
+          </Suspense>
+        )}
       </div>
 
       {/* Tasks Display Section */}

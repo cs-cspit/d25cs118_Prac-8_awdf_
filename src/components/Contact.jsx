@@ -40,18 +40,17 @@ function Contact() {
       <div className="contact-card">
         <h3>About This Project</h3>
         <p><strong>Course:</strong> Advanced Web Development Fundamentals (AWDF)</p>
-        <p><strong>Practical:</strong> 7 — Authentication and Middleware Pipeline (JWT + bcrypt)</p>
-        <p><strong>Tech Stack:</strong> React 19, React Router 7, Vite 8, Node.js, Express 5, MongoDB, Mongoose 8, bcryptjs, jsonwebtoken, dotenv</p>
+        <p><strong>Practical:</strong> 8 — Performance Optimization and Lazy Loading in React</p>
+        <p><strong>Tech Stack:</strong> React 19, React Router 7, Vite 8, Node.js, Express 5, MongoDB, Mongoose 8, bcryptjs, jsonwebtoken, recharts (lazy)</p>
 
         <h3 style={{ marginTop: '30px' }}>Key Learning Outcomes</h3>
         <ul>
-          <li>Hash passwords with bcrypt before saving the User document</li>
-          <li>Sign a JWT on login and verify it in an auth middleware</li>
-          <li>Protect every task route; return 401 for missing/invalid/expired tokens</li>
-          <li>Validate and sanitize input on the server before it reaches MongoDB</li>
-          <li>Return every error as consistent JSON: {'{ error, status }'}</li>
-          <li>Keep JWT_SECRET in .env (excluded via .gitignore)</li>
-          <li>Attach the token from one central api.js and handle 401 on the frontend</li>
+          <li>Split routes into separate chunks with React.lazy() and dynamic import()</li>
+          <li>Show a Suspense fallback while a chunk downloads</li>
+          <li>Lazy-load a heavy third-party library only where it is needed</li>
+          <li>Read the Vite build output and the DevTools Network tab</li>
+          <li>Measure and explain a before/after bundle-size comparison</li>
+          <li>Find and remove an unnecessary re-render with the React Profiler</li>
         </ul>
 
         <h3 style={{ marginTop: '30px' }}>Architecture</h3>

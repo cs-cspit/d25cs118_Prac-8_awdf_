@@ -1,100 +1,50 @@
-# Practical 7 — Authentication and Middleware Pipeline
+# Practical 8 — Performance Optimization and Lazy Loading in React
 
 **Student:** D25CS118 · **Subject:** Advanced Web Development Frameworks (ITUE301)
 
-Continues from **Practical 6** (full-stack Task Manager). Adds JWT authentication,
-bcrypt password hashing, an auth middleware on every task route, and server-side
-input validation.
+Continues from **Practical 7** (Task Manager with JWT auth). The backend is unchanged;
+this practical optimizes the React frontend.
+
+📄 **Before/after comparison:** [docs/performance.md](docs/performance.md)
 
 ## Run locally
 
 ```bash
 npm install
-cp .env.example .env        # then put a long random value in JWT_SECRET
-npm run server              # Express on http://localhost:5000  (MongoDB must be running)
-npm run dev                 # React on  http://localhost:5173  (second terminal)
-# or both at once:
-npm run dev:full
+cp .env.example .env        # set JWT_SECRET
+npm run server              # Express :5000 (MongoDB must be running)
+npm run dev                 # React :5173
 ```
 
-`.env` is listed in `.gitignore` — the JWT secret is never committed.
+To test the optimized production bundle:
 
-## Request pipeline
-
-```
-POST /api/auth/register → validateRegister → bcrypt.hash → save User → 201
-POST /api/auth/login    → validateLogin    → bcrypt.compare → jwt.sign (1h) → token
-
-Protected route:
-Client (Authorization: Bearer <token>)
-   → logger → contentType → express.json
-   → protect (auth.js: jwt.verify, sets req.user, 401 on failure)
-   → validateTaskId / validateTaskBody
-   → controller (taskRoutes.js, queries filtered by req.user.id)
-   → errorHandler (JSON { error, status }, no stack traces)
+```bash
+npm run build               # see the separate chunk files in the output
+npm run preview             # serves dist/ on :4173
 ```
 
-## Endpoints
+## What changed
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | /api/auth/register | public | `{ name, email, password }` → 201 |
-| POST | /api/auth/login | public | `{ email, password }` → `{ token, user }` |
-| GET | /api/auth/me | Bearer | Logged-in user's details |
-| GET | /api/tasks | Bearer | Tasks of the logged-in user |
-| GET | /api/tasks/:id | Bearer | One task |
-| POST | /api/tasks | Bearer | Create task (title required) |
-| PUT | /api/tasks/:id | Bearer | Update task |
-| DELETE | /api/tasks/:id | Bearer | Delete task |
+| File | Change |
+|---|---|
+| `src/App.jsx` | `Tasks`, `Contact`, `Login`, `Register` loaded with `React.lazy()`; one `<Suspense>` around `<Routes>` only. `Home` stays a static import (landing page). |
+| `src/components/PageLoader.jsx` | Suspense fallback (spinner + skeleton). Hidden for the first 300 ms so it never flickers on fast connections. |
+| `src/components/ChunkErrorBoundary.jsx` | Catches a failed chunk download and shows a Retry button instead of a blank screen. |
+| `src/components/TaskStats.jsx` | New charts (recharts). Lazy-loaded from Tasks only when **Show statistics** is clicked — the heavy-component assignment. |
+| `src/components/Tasks.jsx` | `React.memo(TaskList)` + `useCallback` handlers — fixes the re-render found with the Profiler. |
 
-## Validation rules (server side)
+## Results
 
-| Field | Rule | Error |
+| | Before | After |
 |---|---|---|
-| name | required, ≥ 2 chars | 400 `details.name` |
-| email | required, valid format, lower-cased & trimmed | 400 `details.email` |
-| password | required, ≥ 6 chars | 400 `details.password` |
-| task title | required, non-empty string, ≤ 100 chars, trimmed | 400 |
-| task priority | one of low / medium / high | 400 |
-| task id | valid MongoDB ObjectId | 400 |
+| Initial JS (minified) | 632.81 kB | **238.17 kB** (−62 %) |
+| Initial JS (gzip) | 188.39 kB | **77.01 kB** (−59 %) |
+| Chunks | 1 | 7 (main, shared runtime, 4 routes, charts) |
 
-All errors use the same JSON shape: `{ "error": "...", "status": 4xx }`.
+## Demo for evaluation
 
-## Tested responses
-
-| Case | Status | Body |
-|---|---|---|
-| GET /api/tasks without token | 401 | Missing or malformed Authorization header |
-| Tampered token | 401 | Invalid token |
-| Expired token | 401 | Token expired. Please log in again. |
-| Register with bad input | 400 | per-field `details` for name / email / password |
-| Register same email twice | 409 | An account with this email already exists |
-| Wrong password | 401 | Invalid email or password |
-| Create task without title | 400 | Title is required |
-| Stored password in MongoDB | — | `$2b$10$…` (bcrypt hash, not plain text) |
-
-## Testing in Postman
-
-Import `postman_collection.json`. Run **Register → Login** — the Login request's test
-script saves the token into the `token` collection variable, and the task requests send
-`Authorization: Bearer {{token}}` automatically.
-
-## Frontend
-
-- `src/api.js` — one base URL; attaches the token to every request; on any 401 clears
-  the token and fires `auth:unauthorized`.
-- `src/context/AuthProvider.jsx` — holds the user, restores the session with `/auth/me`
-  on reload, logs out on `auth:unauthorized`.
-- `ProtectedRoute` — redirects to `/login` (and back again after login) if not logged in.
-- Navbar shows the user's name and a **Logout** button that clears the token.
-
-## Key questions
-
-1. **Why hash passwords?** If the database leaks, plain-text passwords are immediately
-   usable (and often reused on other sites). bcrypt is one-way, salted and deliberately
-   slow, so recovering passwords from the hashes is impractical.
-2. **What does the auth middleware verify?** That the token's signature was made with our
-   `JWT_SECRET` and that it has not expired. Missing, malformed, tampered or expired
-   tokens are rejected with 401 before the controller runs.
-3. **Why validate on the server too?** Frontend checks can be bypassed (Postman, curl,
-   modified JS). The server is the only place that can be trusted to protect the database.
+1. `npm run build && npm run preview`
+2. DevTools → Network → filter **JS** → throttle **Slow 3G**.
+3. Load `/` — only `index-*.js` and `jsx-runtime-*.js`.
+4. Click **Contact** — the skeleton fallback appears, then `Contact-*.js` arrives.
+5. Log in, open **Tasks**, click **Show statistics** — `TaskStats-*.js` (recharts) loads only now.

@@ -1,8 +1,8 @@
 {
-  "name": "prac-7_d25cs118",
+  "name": "prac-8_d25cs118",
   "private": true,
   "version": "1.0.0",
-  "description": "Task Manager with JWT authentication and validation middleware (React + Express + MongoDB)",
+  "description": "Task Manager with route-based code splitting and lazy loading (React + Express + MongoDB)",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -21,7 +21,8 @@
     "mongoose": "^8.14.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.8.0"
+    "react-router-dom": "^7.8.0",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
